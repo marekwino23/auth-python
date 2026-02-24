@@ -2,3 +2,4 @@ uvicorn[standard]
 fastapi
 mysql-connector-python
 passlib[bcrypt]
+python-jose[cryptography]
