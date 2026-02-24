@@ -1,5 +1,6 @@
 uvicorn[standard]
 fastapi
+argon2-cffi
 mysql-connector-python
 passlib[bcrypt]
 python-jose[cryptography]
