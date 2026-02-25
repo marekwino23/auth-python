@@ -1,6 +1,9 @@
 import mysql.connector
+import os
 from passlib.context import CryptContext
 from fastapi import FastAPI, HTTPException
+from dotenv import load_dotenv
+load_dotenv()
 
 # bcrypt do hashowania haseł
 pwd_context = CryptContext(
@@ -9,10 +12,10 @@ pwd_context = CryptContext(
 )
 
 db_config = {
-    "host": "mn14.webd.pl",
-    "user": "vidad_formy",
-    "password": "Formy2026@",
-    "database": "vidad_formy"
+    "host": os.getenv("DB_HOST"),
+    "user": os.getenv("DB_USER"),
+    "password": os.getenv("DB_PASSWORD"),
+    "database": os.getenv("DB_NAME")
 }
 
 def get_connection():
