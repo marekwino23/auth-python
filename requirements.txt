@@ -1,6 +1,7 @@
 uvicorn[standard]
 fastapi
 itsdangerous
+fastapi_mail
 argon2-cffi
 mysql-connector-python
 passlib[bcrypt]
