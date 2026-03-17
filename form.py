@@ -8,6 +8,7 @@ from passlib.context import CryptContext
 from jose import jwt
 from datetime import datetime, timedelta
 from fastapi.security import OAuth2PasswordBearer
+from fastapi.responses import JSONResponse
 
 app = FastAPI()
 
@@ -19,6 +20,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+class ResetPasswordRequest(BaseModel):
+    email: str
+    new_password: str
 
 class UserRegisterRequest(BaseModel):
     name: str
@@ -118,9 +123,29 @@ async def change_password_endpoint(user: UserChangePassword):
         new_password=user.newPassword
     )
     if not result:
-        raise HTTPException(status_code=401, detail="Niepoprawne hasło lub użytkownik nie istnieje")
+     return JSONResponse(
+        status_code=401,
+        content={"message": "Niepoprawne hasło lub użytkownik nie istnieje"}
+    )
     return {"message": "Password changed successfully"}
 
+@app.patch("/forgot-password")
+async def reset_password_endpoint(user: ResetPasswordRequest):
+    result = db.reset_password(
+        email=user.email,
+        new_password=user.new_password
+    )
+
+    if not result:
+        return JSONResponse(
+            status_code=401,
+            content={"message": "Użytkownik o takim emailu nie istnieje"}
+        )
+
+    return JSONResponse(
+        status_code=200,
+        content={"message": "Hasło zostało zmienione pomyślnie"}
+    )
 
 @app.post("/register", status_code=status.HTTP_200_OK)
 async def create_user(user: UserRegisterRequest, background_tasks: BackgroundTasks):

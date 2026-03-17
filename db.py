@@ -152,6 +152,40 @@ def change_password(id: int, email: str, old_password: str, new_password: str) -
     finally:
         conn.close()
 
+
+
+def reset_password(email: str, new_password: str) -> bool:
+    conn = get_connection()
+
+    if not conn.is_connected():
+        conn.reconnect()
+
+    try:
+        with conn.cursor() as cursor:
+            # Sprawdzenie czy użytkownik istnieje
+            cursor.execute(
+                "SELECT id, email FROM users WHERE email=%s",
+                (email,)
+            )
+            user = cursor.fetchone()
+
+            if not user:
+                return False  # brak użytkownika
+
+            # Haszowanie nowego hasła
+            new_hashed_password = hash_password(new_password)
+
+            cursor.execute(
+                "UPDATE users SET password=%s WHERE email=%s",
+                (new_hashed_password, email)
+            )
+            conn.commit()
+
+            return True
+
+    finally:
+        conn.close()
+
 def get_users():
     """Zwraca listę wszystkich użytkowników"""
     with get_connection() as conn:
