@@ -1,10 +1,9 @@
 import mysql.connector
 import os
 from itsdangerous import URLSafeTimedSerializer
-from fastapi import FastAPI, BackgroundTasks
+from fastapi import BackgroundTasks, HTTPException
 from fastapi_mail import FastMail, MessageSchema
 from passlib.context import CryptContext
-from fastapi import FastAPI, HTTPException
 from config import conf
 from dotenv import load_dotenv
 load_dotenv()

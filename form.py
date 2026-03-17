@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 import db
+from fastapi import BackgroundTasks
 from pydantic import BaseModel
 from passlib.context import CryptContext
 from jose import jwt
@@ -24,6 +25,7 @@ class UserRegisterRequest(BaseModel):
     email:str
     password:str
     section:str
+    is_verified:bool
 
 class UserLoginRequest(BaseModel):
     email:str
@@ -40,6 +42,18 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
+
+
+def confirm_token(token: str):
+    try:
+        email = serializer.loads(
+            token,
+            salt="email-confirm",
+            max_age=3600  # token ważny 1h
+        )
+        return email
+    except Exception:
+        return None
 
 def hash_password(password: str):
     return pwd_context.hash(password)
@@ -76,14 +90,31 @@ def login(user:UserLoginRequest):
         "token_type": "bearer"  # standard nazwy tokenu dla Authorization header
     }
 
+
+@app.get("/verify-email")
+async def verify_email(token: str):
+    email = confirm_token(token)
+
+    if not email:
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
+
+    # oznaczasz usera jako verified w DB
+
+    return {"message": "Email verified"}
+
 @app.post("/register", status_code=status.HTTP_200_OK)
-def create_user(user: UserRegisterRequest):
+async def create_user(user: UserRegisterRequest, background_tasks: BackgroundTasks):
     db.create_user(
         user.name,
         user.surname,
         user.email,
         user.password,  # <- przekazujemy plain password, db.py hashuje
-        user.section
+        user.section,
+        False,
     )
+    token = db.generate_verification_token(user.email)
+    link = f"http://localhost:8000/verify-email?token={token}"
+
+    await db.send_verification_email(user.email, background_tasks)
     return {"message": "user successfully created"}
 
