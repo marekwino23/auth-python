@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 import db
@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from passlib.context import CryptContext
 from jose import jwt
 from datetime import datetime, timedelta
+from fastapi.security import OAuth2PasswordBearer
 
 app = FastAPI()
 
@@ -30,6 +31,12 @@ class UserRegisterRequest(BaseModel):
 class UserLoginRequest(BaseModel):
     email:str
     password:str
+
+class UserChangePassword(BaseModel):
+    id:int
+    email: str
+    oldPassword:str
+    newPassword:str    
 
 # 🔑 Sekretny klucz do podpisywania tokenów JWT
 SECRET_KEY = "2f1d3b9a7c5e4d8f0b1a3c6e9d7f2b1c5a3d7e8f9b0c1d2e3f4a5b6c7d8e9f0a"
@@ -101,6 +108,19 @@ async def verify_email(token: str):
     # oznaczasz usera jako verified w DB
 
     return {"message": "Email verified"}
+
+@app.patch("/change-password")
+async def change_password_endpoint(user: UserChangePassword):
+    result = db.change_password(
+        id=user.id,
+        email=user.email,
+        old_password=user.oldPassword,
+        new_password=user.newPassword
+    )
+    if not result:
+        raise HTTPException(status_code=401, detail="Niepoprawne hasło lub użytkownik nie istnieje")
+    return {"message": "Password changed successfully"}
+
 
 @app.post("/register", status_code=status.HTTP_200_OK)
 async def create_user(user: UserRegisterRequest, background_tasks: BackgroundTasks):

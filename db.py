@@ -1,8 +1,9 @@
 import mysql.connector
 import os
 from itsdangerous import URLSafeTimedSerializer
-from fastapi import BackgroundTasks, HTTPException
+from fastapi import BackgroundTasks, Depends, HTTPException
 from fastapi_mail import FastMail, MessageSchema
+from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 from config import conf
 from dotenv import load_dotenv
@@ -10,6 +11,8 @@ load_dotenv()
 
 key = os.getenv("SECRET_KEY")
 serializer = URLSafeTimedSerializer(key)  # unikalny klucz
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 # bcrypt do hashowania haseł
 pwd_context = CryptContext(
@@ -112,7 +115,42 @@ def login_user(email: str, password: str):
     finally:
         cursor.close()
         conn.close()
+    
 
+def change_password(id: int, email: str, old_password: str, new_password: str) -> bool:
+    conn = get_connection()
+
+    if not conn.is_connected():
+        conn.reconnect()
+
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "SELECT id, email, password FROM users WHERE id=%s AND email=%s",
+                (id, email)
+            )
+            user = cursor.fetchone()
+
+            if not user:
+                return False  # brak użytkownika
+
+            id, email, hashed_password = user
+
+            if not verify_password(old_password, hashed_password):
+                return False  # złe stare hasło
+
+            new_hashed_password = hash_password(new_password)
+
+            cursor.execute(
+                "UPDATE users SET password=%s WHERE id=%s",
+                (new_hashed_password, id)
+            )
+            conn.commit()
+
+            return True
+
+    finally:
+        conn.close()
 
 def get_users():
     """Zwraca listę wszystkich użytkowników"""
